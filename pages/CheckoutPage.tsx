@@ -75,69 +75,76 @@ const CheckoutPage: React.FC = () => {
   }, [navigate, location]);
 
   const handleCheckout = async () => {
-    if (!user || !plan) return;
+  if (!user || !plan) return;
 
-    setLoading(true);
-    setError('');
+  setLoading(true);
+  setError('');
 
-    try {
-      // For free plan, just update user subscription in database
-      if (plan.id === 'starter' || plan.price === 0) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            subscription_plan: plan.id,
-            subscription_status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
+  try {
+    // For free plan
+    if (plan.id === 'starter' || plan.price === 0) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          subscription_plan: plan.id,
+          subscription_status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
-        if (updateError) throw updateError;
-        
-        navigate('/dashboard', { 
-          state: { message: `Successfully subscribed to ${plan.name} plan!` } 
-        });
-        return;
-      }
-
-      // For paid plans, create Stripe checkout session
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          planId: plan.id,
-          billingCycle: plan.billingCycle,
-          userEmail: user.email,
-        }),
-      });
-
-      const { sessionId, error: stripeError } = await response.json();
+      if (updateError) throw updateError;
       
-      if (stripeError) {
-        throw new Error(stripeError);
-      }
-
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      if (!stripe) throw new Error('Stripe failed to load');
-      
-      const { error: redirectError } = await stripe.redirectToCheckout({
-        sessionId,
+      navigate('/dashboard', { 
+        state: { message: `Successfully subscribed to ${plan.name} plan!` } 
       });
-
-      if (redirectError) {
-        throw redirectError;
-      }
-    } catch (err: any) {
-      console.error('Checkout error:', err);
-      setError(err.message || 'An error occurred during checkout. Please try again.');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    // For paid plans
+    console.log('Calling backend API:', `${import.meta.env.VITE_API_URL}/api/create-checkout-session`);
+    
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        planId: plan.id,
+        billingCycle: plan.billingCycle,
+        userEmail: user.email,
+      }),
+    });
+
+    const data = await response.json();
+    
+    console.log('Backend response:', data);
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to create checkout session');
+    }
+
+    const { sessionId } = data;
+
+    // Redirect to Stripe Checkout
+    const stripe = await stripePromise;
+    if (!stripe) throw new Error('Stripe failed to load');
+
+    const { error: redirectError } = await stripe.redirectToCheckout({
+      sessionId,
+    });
+
+    if (redirectError) {
+      throw redirectError;
+    }
+
+  } catch (err: any) {
+    console.error('Checkout error:', err);
+    setError(err.message || 'An error occurred during checkout. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   if (!plan || !user) {
     return (
