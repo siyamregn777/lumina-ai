@@ -11,9 +11,13 @@ export const config = {
   },
   stripe: {
     publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+    secretKey: import.meta.env.VITE_STRIPE_SECRET_KEY || '',
     prices: {
-      monthly: import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID || 'price_default_monthly',
-      yearly: import.meta.env.VITE_STRIPE_YEARLY_PRICE_ID || 'price_default_yearly',
+      starter: import.meta.env.VITE_STRIPE_STARTER_PRICE_ID || 'price_starter',
+      proMonthly: import.meta.env.VITE_STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
+      proYearly: import.meta.env.VITE_STRIPE_PRO_YEARLY_PRICE_ID || 'price_pro_yearly',
+      enterpriseMonthly: import.meta.env.VITE_STRIPE_ENTERPRISE_MONTHLY_PRICE_ID || 'price_enterprise_monthly',
+      enterpriseYearly: import.meta.env.VITE_STRIPE_ENTERPRISE_YEARLY_PRICE_ID || 'price_enterprise_yearly',
     },
   },
 };

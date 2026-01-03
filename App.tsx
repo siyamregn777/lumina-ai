@@ -15,6 +15,7 @@ import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import { User, UserRole, SubscriptionPlan } from './types';
 import { supabase } from './lib/supabase';
+import CheckoutPage from './pages/CheckoutPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -78,7 +79,7 @@ const App: React.FC = () => {
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            
+            <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
             <Route 
               path="/dashboard/*" 
               element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} 
