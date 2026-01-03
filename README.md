@@ -18,7 +18,10 @@ View your app in AI Studio: https://ai.studio/apps/drive/1NGTnugpldZs1XDpRGBWsSj
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+<<<<<<< HEAD
 
 Deploy url
 
 https://lumina-ai-green.vercel.app/
+=======
+>>>>>>> a3af610562cf10611b11e04a228086a3fbcc414e
