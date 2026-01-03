@@ -1,4 +1,4 @@
-
+// config.ts
 /**
  * Application Configuration
  * These values are pulled from environment variables.
@@ -6,14 +6,14 @@
  */
 export const config = {
   supabase: {
-    url: (process.env.VITE_SUPABASE_URL as string) || '',
-    anonKey: (process.env.VITE_SUPABASE_ANON_KEY as string) || '',
+    url: import.meta.env.VITE_SUPABASE_URL || '',
+    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
   },
   stripe: {
-    publishableKey: (process.env.VITE_STRIPE_PUBLISHABLE_KEY as string) || '',
+    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
     prices: {
-      monthly: (process.env.VITE_STRIPE_MONTHLY_PRICE_ID as string) || 'price_default_monthly',
-      yearly: (process.env.VITE_STRIPE_YEARLY_PRICE_ID as string) || 'price_default_yearly',
+      monthly: import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID || 'price_default_monthly',
+      yearly: import.meta.env.VITE_STRIPE_YEARLY_PRICE_ID || 'price_default_yearly',
     },
   },
 };

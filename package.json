@@ -9,12 +9,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stripe/stripe-js": "4.8.0",
+    "@supabase/supabase-js": "^2.89.0",
     "lucide-react": "^0.454.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^6.27.0",
     "react": "^19.0.0",
-    "@supabase/supabase-js": "2.45.4",
-    "@stripe/stripe-js": "4.8.0"
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^6.27.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
