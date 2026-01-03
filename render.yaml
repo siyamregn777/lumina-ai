@@ -1,0 +1,24 @@
+# render.yaml
+services:
+  - type: web
+    name: lumina-ai-backend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PRO_MONTHLY_PRICE_ID
+        sync: false
+      - key: STRIPE_PRO_YEARLY_PRICE_ID
+        sync: false
+      - key: STRIPE_ENTERPRISE_MONTHLY_PRICE_ID
+        sync: false
+      - key: STRIPE_ENTERPRISE_YEARLY_PRICE_ID
+        sync: false
+      - key: FRONTEND_URL
+        value: https://lumina-ai-green.vercel.app

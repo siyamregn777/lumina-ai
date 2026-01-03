@@ -1,48 +1,58 @@
-// server.js
+// server.js - Updated for Render deployment
 import express from 'express';
 import Stripe from 'stripe';
 import cors from 'cors';
-import dotenv from 'dotenv';
-
-// Load backend environment variables
-dotenv.config({ path: '.env.server' });
-
-console.log('🚀 Starting backend server...');
-console.log('📋 Environment check:');
-console.log('- STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? '✅ Loaded' : '❌ Missing');
-console.log('- PORT:', process.env.PORT || 3001);
-
-// Validate Stripe key
-if (!process.env.STRIPE_SECRET_KEY) {
-  console.error('❌ ERROR: STRIPE_SECRET_KEY is missing from .env.server');
-  process.exit(1);
-}
-
-if (!process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
-  console.error('❌ ERROR: STRIPE_SECRET_KEY should start with "sk_"');
-  process.exit(1);
-}
 
 const app = express();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Get environment variables
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const frontendUrl = process.env.FRONTEND_URL || 'https://lumina-ai-green.vercel.app';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Configure CORS for production
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://lumina-ai-green.vercel.app',
+  'https://lumina-ai.vercel.app',
+  // Add other domains as needed
+];
 
 app.use(cors({
-  origin: 'http://localhost:3000', // Your frontend URL
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
+
 app.use(express.json());
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    service: 'Lumina AI Backend',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Stripe checkout endpoint
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    console.log('\n🛒 Creating checkout session...');
-    console.log('Request body:', req.body);
+    console.log('📦 Creating Stripe checkout session...');
     
     const { userId, planId, billingCycle, userEmail } = req.body;
     
-    // Price mapping - updated with your actual Price IDs
+    // Price mapping
     const priceMap = {
-      starter: process.env.STRIPE_STARTER_PRICE_ID,
       pro: {
         monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
         yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
@@ -53,43 +63,28 @@ app.post('/api/create-checkout-session', async (req, res) => {
       },
     };
     
-    let priceId;
-    if (planId === 'starter') {
-      priceId = priceMap.starter;
-    } else {
-      priceId = priceMap[planId]?.[billingCycle];
-    }
+    const priceId = priceMap[planId]?.[billingCycle];
     
     if (!priceId) {
-      console.error('❌ Price ID not found for:', { planId, billingCycle });
-      return res.status(400).json({ 
-        error: `Price not configured for plan: ${planId} (${billingCycle})` 
-      });
+      return res.status(400).json({ error: 'Invalid plan or billing cycle' });
     }
     
-    console.log('💰 Using Price ID:', priceId);
+    // Initialize Stripe
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     
-    // Create Stripe checkout session
+    // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer_email: userEmail,
       client_reference_id: userId,
       payment_method_types: ['card'],
-      line_items: [{
-        price: priceId,
-        quantity: 1,
-      }],
-      mode: planId === 'starter' ? 'payment' : 'subscription',
-      success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/pricing`,
-      metadata: {
-        userId,
-        planId,
-        billingCycle,
-      },
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: 'subscription',
+      success_url: `${frontendUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/pricing`,
+      metadata: { userId, planId, billingCycle },
     });
     
     console.log('✅ Checkout session created:', session.id);
-    console.log('🔗 Checkout URL:', session.url);
     
     res.json({ 
       sessionId: session.id,
@@ -97,54 +92,20 @@ app.post('/api/create-checkout-session', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('❌ Stripe API error:', error.message);
-    res.status(500).json({ 
-      error: error.message,
-      type: error.type,
-      code: error.code
-    });
-  }
-});
-
-// Test endpoint
-app.get('/api/test-stripe', async (req, res) => {
-  try {
-    const products = await stripe.products.list({ limit: 5 });
-    const prices = await stripe.prices.list({ limit: 10 });
-    
-    res.json({
-      status: 'Stripe connection successful',
-      products: products.data.map(p => ({ id: p.id, name: p.name })),
-      prices: prices.data.map(p => ({ 
-        id: p.id, 
-        product: p.product,
-        unit_amount: p.unit_amount,
-        currency: p.currency,
-        type: p.type
-      }))
-    });
-  } catch (error) {
+    console.error('❌ Stripe error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    service: 'Stripe Checkout API',
-    version: '1.0.0'
-  });
-});
-
+// Start server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`\n✅ Server running on http://localhost:${PORT}`);
-  console.log(`📋 Available endpoints:`);
-  console.log(`   GET  http://localhost:${PORT}/api/health`);
-  console.log(`   GET  http://localhost:${PORT}/api/test-stripe`);
-  console.log(`   POST http://localhost:${PORT}/api/create-checkout-session`);
-  console.log(`\n🎯 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-  console.log(`🔐 Stripe mode: ${process.env.STRIPE_SECRET_KEY.includes('test') ? 'TEST' : 'LIVE'}`);
+  console.log(`
+🚀 Backend server started
+📡 Port: ${PORT}
+🌐 Environment: ${process.env.NODE_ENV || 'development'}
+🔗 Frontend: ${frontendUrl}
+💳 Stripe: ${stripeKey ? 'Configured' : 'Missing'}
+📋 API: http://localhost:${PORT}/api/health
+`);
 });
