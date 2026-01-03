@@ -1,0 +1,8 @@
+{
+  "name": "Lumina AI - SaaS Platform",
+  "description": "A production-ready SaaS application for automated business insights, featuring integrated subscriptions, dashboard analytics, and AI-powered workflows.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
