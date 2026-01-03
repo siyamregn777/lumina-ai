@@ -1,10 +1,53 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PRICING_PLANS } from '../constants';
 import { Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { config } from '../config';
+import { loadStripe } from '@stripe/stripe-js';
 
 const PricingPage: React.FC = () => {
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handleCheckout = async (planId: string) => {
+    if (planId === 'FREE') return;
+    
+    setLoadingPlan(planId);
+
+    try {
+      // Initialize Stripe with the publishable key from our config
+      const stripe = await loadStripe(config.stripe.publishableKey);
+      
+      if (!stripe) {
+        throw new Error("Stripe failed to initialize. Check your VITE_STRIPE_PUBLISHABLE_KEY.");
+      }
+
+      // Select the correct Price ID based on the plan from our config
+      const priceId = planId === 'MONTHLY' 
+        ? config.stripe.prices.monthly 
+        : config.stripe.prices.yearly;
+
+      /**
+       * PRODUCTION NOTE:
+       * In a real production environment, you should send this priceId to your backend API.
+       * Your backend would use the STRIPE_SECRET_KEY to create a Checkout Session
+       * and return a sessionId. Then you'd call stripe.redirectToCheckout({ sessionId }).
+       */
+      console.log(`[Stripe] Initiating checkout for Plan: ${planId} (Price ID: ${priceId})`);
+      
+      // Simulation of a backend call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      alert(`Environment Setup Working!\n\nUsing Publishable Key: ${config.stripe.publishableKey.substring(0, 10)}...\nUsing Price ID: ${priceId}\n\nCheck console for full log details.`);
+
+    } catch (err: any) {
+      console.error("Checkout Error:", err.message);
+      alert(err.message);
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
   return (
     <div className="bg-[#fafafa] pt-24 pb-32">
       <div className="max-w-7xl mx-auto px-4 text-center mb-20">
@@ -43,27 +86,28 @@ const PricingPage: React.FC = () => {
               ))}
             </ul>
 
-            <Link
-              to={plan.id === 'FREE' ? '/register' : `/register?plan=${plan.id}`}
-              className={`w-full py-4 rounded-xl font-bold text-lg transition-all text-center ${
-                plan.highlighted 
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200' 
-                  : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
-              }`}
-            >
-              {plan.cta}
-            </Link>
+            {plan.id === 'FREE' ? (
+              <Link
+                to="/register"
+                className="w-full py-4 rounded-xl font-bold text-lg transition-all text-center bg-slate-100 text-slate-900 hover:bg-slate-200"
+              >
+                {plan.cta}
+              </Link>
+            ) : (
+              <button
+                onClick={() => handleCheckout(plan.id)}
+                disabled={loadingPlan === plan.id}
+                className={`w-full py-4 rounded-xl font-bold text-lg transition-all text-center ${
+                  plan.highlighted 
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200' 
+                    : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                } disabled:opacity-50`}
+              >
+                {loadingPlan === plan.id ? 'Connecting...' : plan.cta}
+              </button>
+            )}
           </div>
         ))}
-      </div>
-      
-      <div className="max-w-4xl mx-auto px-4 mt-20 bg-indigo-50 border border-indigo-100 rounded-3xl p-10 text-center">
-        <h4 className="text-2xl font-bold text-slate-900 mb-2">Need an enterprise solution?</h4>
-        <p className="text-slate-600 mb-8">We offer custom plans for organizations with 50+ users and specific security requirements.</p>
-        <Link to="/contact" className="inline-flex items-center text-indigo-600 font-bold hover:underline">
-          Contact our sales team
-          <Check className="ml-2 w-5 h-5" />
-        </Link>
       </div>
     </div>
   );

@@ -14,27 +14,55 @@ import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import { User, UserRole, SubscriptionPlan } from './types';
+import { supabase } from './lib/supabase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Initialize simulated auth state
   useEffect(() => {
-    const storedUser = localStorage.getItem('lumina_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        mapSupabaseUser(session.user);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        mapSupabaseUser(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = (u: User) => {
-    setUser(u);
-    localStorage.setItem('lumina_user', JSON.stringify(u));
+  const mapSupabaseUser = (sbUser: any) => {
+    setUser({
+      id: sbUser.id,
+      email: sbUser.email || '',
+      name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0],
+      role: sbUser.user_metadata?.role || UserRole.USER,
+      subscription: sbUser.user_metadata?.subscription || SubscriptionPlan.FREE,
+    });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('lumina_user');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -48,16 +76,14 @@ const App: React.FC = () => {
             <Route path="/docs" element={<DocsPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-            <Route path="/register" element={<RegisterPage onLogin={handleLogin} />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             
-            {/* Protected Routes */}
             <Route 
               path="/dashboard/*" 
               element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} 
             />
             
-            {/* Admin Routes */}
             <Route 
               path="/admin/*" 
               element={user?.role === UserRole.ADMIN ? <AdminPanel /> : <Navigate to="/" />} 
