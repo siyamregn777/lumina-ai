@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter  as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -16,7 +15,13 @@ import AdminPanel from './pages/AdminPanel';
 import { User, UserRole, SubscriptionPlan } from './types';
 import { supabase } from './lib/supabase';
 import CheckoutPage from './pages/CheckoutPage';
-
+import DashboardOverview from './components/dashboard/DashboardOverview';
+import AIChatPanel from './components/dashboard/AIChatPanel';
+import DataUpload from './components/dashboard/DataUpload';
+import InsightsPage from './components/dashboard/InsightsPage';
+import ReportsPage from './components/dashboard/ReportsPage';
+import BillingSettings from './components/dashboard/BillingSettings';
+import SubscriptionAccount from './components/dashboard/SubscriptionAccount';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,10 +85,21 @@ const App: React.FC = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
+            
+            {/* Dashboard with nested routes */}
             <Route 
-              path="/dashboard/*" 
+              path="/dashboard" 
               element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} 
-            />
+            >
+              <Route index element={<DashboardOverview user={user} />} />
+              <Route path="ai-chat" element={<AIChatPanel />} />
+              <Route path="data-upload" element={<DataUpload />} />
+              <Route path="insights" element={<InsightsPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="billing" element={<BillingSettings user={user} />} />
+              <Route path="subscription" element={<SubscriptionAccount user={user} />} />
+
+            </Route>
             
             <Route 
               path="/admin/*" 
