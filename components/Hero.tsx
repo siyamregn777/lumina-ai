@@ -62,6 +62,7 @@ const Hero: React.FC = () => {
         {/* Product Preview */}
         <div className="mt-20 relative mx-auto max-w-5xl group">
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-40 transition-opacity" />
+
           <div className="relative bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xl">
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-3 flex items-center space-x-2">
               <div className="flex space-x-1.5">
@@ -73,13 +74,28 @@ const Hero: React.FC = () => {
                 app.lumina.ai/dashboard
               </div>
             </div>
-            <img 
-              src="https://picsum.photos/seed/dashboard/1200/800" 
-              alt="Dashboard Preview" 
-              className="w-full h-auto"
-            />
+
+            <div className="relative">
+              <img 
+                src="https://picsum.photos/seed/dashboard/1200/800" 
+                alt="Dashboard Preview" 
+                className="w-full h-auto"
+              />
+
+              {/* Text Overlay */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4">
+                <h3 className="text-3xl md:text-4xl font-bold drop-shadow-lg">
+                  Your AI Insights
+                </h3>
+                <p className="text-lg md:text-xl mt-2 drop-shadow-md max-w-lg">
+                  See your data smarter, faster, and in real time.
+                </p>
+              </div>
+
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );

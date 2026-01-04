@@ -11,12 +11,12 @@ const HomePage: React.FC = () => {
       <Hero />
       
       {/* Logos Section */}
-      <section className="py-20 bg-slate-50/50">
+      <section className="py-20 bg-gray-200 ml-8 mr-8 rounded-3xl">
         <div className="max-w-7xl mx-auto px-4">
           <p className="text-center text-sm font-semibold text-slate-400 uppercase tracking-widest mb-10">Trusted by fast-growing teams</p>
-          <div className="flex flex-wrap justify-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+          <div className="flex  flex-wrap justify-center gap-12 md:gap-24 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
             {['Stripe', 'Airbnb', 'Netflix', 'Shopify', 'Slack', 'Vercel'].map(logo => (
-              <span key={logo} className="text-2xl font-bold text-slate-400 hover:text-slate-900 cursor-default">{logo}</span>
+              <span key={logo} className="text-2xl font-bold text-black hover:text-slate-900 cursor-default">{logo}</span>
             ))}
           </div>
         </div>
