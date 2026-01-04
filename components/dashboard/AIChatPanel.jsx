@@ -145,7 +145,7 @@ const AIChatPanel = () => {
             <div className="h-48 bg-gradient-to-b from-blue-50 to-indigo-50 rounded-xl flex items-center justify-center">
               <BarChart className="w-12 h-12 text-indigo-300" />
             </div>
-            <p className="text-sm text-slate-500 mt-4">Interactive charts appear here based on your questions</p>
+            <p className="text-sm text-slate-500 mt-4">Interactive charts appear here based on your question</p>
           </div>
         </div>
       </div>
