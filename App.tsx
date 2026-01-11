@@ -22,6 +22,7 @@ import InsightsPage from './src/components/dashboard/InsightsPage';
 import ReportsPage from './src/components/dashboard/ReportsPage';
 import BillingSettings from './src/components/dashboard/BillingSettings';
 import SubscriptionAccount from './src/components/dashboard/SubscriptionAccount';
+import TestCheckout from './src/pages/TestCheckout';
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +76,7 @@ const App: React.FC = () => {
         <Navbar user={user} onLogout={handleLogout} />
         <main className="flex-grow">
           <Routes>
+          
             <Route path="/" element={<HomePage />} />
             <Route path="/features" element={<FeaturesPage />} />
             <Route path="/pricing" element={<PricingPage />} />
@@ -84,7 +86,7 @@ const App: React.FC = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
-            
+            <Route path="/test-checkout" element={<TestCheckout />} />
             {/* Dashboard with nested routes */}
             <Route 
               path="/dashboard" 
@@ -105,6 +107,23 @@ const App: React.FC = () => {
               element={user?.role === UserRole.ADMIN ? <AdminPanel /> : <Navigate to="/" />} 
             />
           </Routes>
+          <button 
+            onClick={() => {
+              console.log('=== DIAGNOSTICS ===');
+              console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+              console.log('Window Origin:', window.location.origin);
+              console.log('User:', user);
+              
+              // Test backend connection
+              fetch(`${import.meta.env.VITE_API_URL}/api/health`)
+                .then(r => r.json())
+                .then(data => console.log('Backend Health:', data))
+                .catch(err => console.error('Backend Error:', err));
+            }}
+            className="fixed bottom-4 right-4 bg-gray-800 text-white p-2 rounded text-xs"
+          >
+            🔧 Diagnostics
+          </button>
         </main>
         <Footer />
       </div>

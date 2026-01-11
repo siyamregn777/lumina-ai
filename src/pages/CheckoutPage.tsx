@@ -81,7 +81,7 @@ const CheckoutPage: React.FC = () => {
   setError('');
 
   try {
-    // For free plan
+    // For free plan (keep as is)
     if (plan.id === 'starter' || plan.price === 0) {
       const { error: updateError } = await supabase
         .from('profiles')
@@ -101,37 +101,56 @@ const CheckoutPage: React.FC = () => {
     }
 
     // For paid plans
-    console.log('Calling backend API:', `${import.meta.env.VITE_API_URL}/api/create-checkout-session`);
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const currentOrigin = window.location.origin;
     
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create-checkout-session`, {
+    console.log('=== FRONTEND CHECKOUT DEBUG ===');
+    console.log('API URL:', apiUrl);
+    console.log('Current Origin:', currentOrigin);
+    console.log('Plan:', plan);
+
+    const response = await fetch(`${apiUrl}/api/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // Add origin header explicitly
+        'Origin': currentOrigin
       },
       body: JSON.stringify({
         userId: user.id,
         planId: plan.id,
         billingCycle: plan.billingCycle,
         userEmail: user.email,
-        success_url: `${import.meta.env.FRONTEND_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${import.meta.env.FRONTEND_URL}/pricing`,
+        // EXPLICITLY set local URLs
+        successUrl: `${currentOrigin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${currentOrigin}/pricing`,
       }),
     });
 
-    const data = await response.json();
-    
-    console.log('Backend response:', data);
+    console.log('Response Status:', response.status);
+
+    const responseText = await response.text();
+    console.log('Response Text:', responseText);
 
     if (!response.ok) {
-      throw new Error(data.error || 'Failed to create checkout session');
+      throw new Error(`HTTP ${response.status}: ${responseText}`);
+    }
+
+    const data = JSON.parse(responseText);
+    console.log('Parsed Response:', data);
+
+    if (!data.sessionId) {
+      throw new Error('No session ID received from backend');
     }
 
     const { sessionId } = data;
+    console.log('✅ Session ID received:', sessionId);
 
     // Redirect to Stripe Checkout
     const stripe = await stripePromise;
     if (!stripe) throw new Error('Stripe failed to load');
 
+    console.log('Redirecting to Stripe Checkout...');
     const { error: redirectError } = await stripe.redirectToCheckout({
       sessionId,
     });
@@ -141,8 +160,21 @@ const CheckoutPage: React.FC = () => {
     }
 
   } catch (err: any) {
-    console.error('Checkout error:', err);
-    setError(err.message || 'An error occurred during checkout. Please try again.');
+    console.error('❌ Checkout Error:', err);
+    console.error('Error Stack:', err.stack);
+    
+    let errorMessage = err.message || 'An error occurred during checkout. Please try again.';
+    
+    // Provide more specific error messages
+    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+      errorMessage = 'Cannot connect to the backend server. Please ensure it is running on localhost:3001';
+    } else if (err.message.includes('CORS')) {
+      errorMessage = 'CORS error detected. Please check browser console for details.';
+    } else if (err.message.includes('HTTP')) {
+      errorMessage = `Server error: ${err.message}`;
+    }
+    
+    setError(errorMessage);
   } finally {
     setLoading(false);
   }
