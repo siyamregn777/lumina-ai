@@ -8,7 +8,7 @@ import {
   Cpu, 
   Layers 
 } from 'lucide-react';
-import { Feature, PricingPlan, SubscriptionPlan, Testimonial } from './types';
+import { Feature, PricingPlan, SubscriptionPlan, Testimonial } from './src/types/types';
 
 export const APP_NAME = "Lumina AI";
 
