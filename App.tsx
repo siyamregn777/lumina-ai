@@ -27,6 +27,7 @@ import DebugPage from './src/pages/Debug';
 import DashboardWrapper from './src/components/DashboardWrapper';
 import CheckoutSuccess from './src/pages/CheckoutSuccess';
 import CheckoutCancel from './src/pages/CheckoutCancel';
+import NotFound from './src/pages/NotFound';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -95,6 +96,8 @@ const App: React.FC = () => {
             <Route path="/debug" element={<DebugPage />} />
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />
+            <Route path="*" element={<NotFound />} />
+
             {/* Dashboard with nested routes */}
             <Route 
               path="/dashboard" 
@@ -117,7 +120,6 @@ const App: React.FC = () => {
               element={user?.role === UserRole.ADMIN ? <AdminPanel /> : <Navigate to="/" />} 
             />
           </Routes>
-
           <button
             onClick={() => {
               console.log('=== ENVIRONMENT DEBUG ===');
