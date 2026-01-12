@@ -2,10 +2,10 @@ import React from 'react';
 
 const ProductPerformance = () => {
   const products = [
-    { name: 'Pro Widget X', revenue: '$42,150', growth: '+15%', color: 'bg-blue-500' },
-    { name: 'Basic Widget', revenue: '$28,430', growth: '+8%', color: 'bg-green-500' },
-    { name: 'Premium Kit', revenue: '$35,920', growth: '+12%', color: 'bg-purple-500' },
-    { name: 'Add-on Pack', revenue: '$18,080', growth: '+5%', color: 'bg-yellow-500' },
+    { name: 'Pro Widget X', revenue: '$0', growth: '+0%', color: 'bg-blue-500' },
+    { name: 'Basic Widget', revenue: '$0', growth: '+0%', color: 'bg-green-500' },
+    { name: 'Premium Kit', revenue: '$0', growth: '+0%', color: 'bg-purple-500' },
+    { name: 'Add-on Pack', revenue: '$0', growth: '+0%', color: 'bg-yellow-500' },
   ];
 
   return (

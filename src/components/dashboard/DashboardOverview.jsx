@@ -26,12 +26,12 @@ const DashboardOverview = ({ user }) => {
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
             <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-50 text-green-600">
-              +12.5%
+              +0.0%
             </span>
           </div>
           <h4 className="text-sm font-medium text-slate-500 mb-1">Total Revenue</h4>
-          <p className="text-2xl font-bold text-slate-900">$124,580</p>
-          <p className="text-xs text-slate-400 mt-2">vs last month: $110,750</p>
+          <p className="text-2xl font-bold text-slate-900">$0</p>
+          <p className="text-xs text-slate-400 mt-2">vs last month: $0</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -40,12 +40,12 @@ const DashboardOverview = ({ user }) => {
               <TrendingUp className="w-5 h-5 text-blue-600" />
             </div>
             <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-600">
-              +8.2%
+              +0.0%
             </span>
           </div>
           <h4 className="text-sm font-medium text-slate-500 mb-1">Monthly Growth %</h4>
-          <p className="text-2xl font-bold text-slate-900">8.2%</p>
-          <p className="text-xs text-slate-400 mt-2">Target: 10%</p>
+          <p className="text-2xl font-bold text-slate-900">0.0%</p>
+          <p className="text-xs text-slate-400 mt-2">Target: 0%</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
@@ -74,9 +74,9 @@ const DashboardOverview = ({ user }) => {
           <h3 className="text-lg font-bold text-slate-900">AI Quick Insights</h3>
         </div>
         <div className="space-y-3">
-          <p className="text-slate-700">• Sales increased by 15% on weekends</p>
-          <p className="text-slate-700">• Customer acquisition cost decreased by 8% this month</p>
-          <p className="text-slate-700">• High churn risk detected for Product B</p>
+          <p className="text-slate-700">• Sales increased by 0% on weekends</p>
+          <p className="text-slate-700">• Customer acquisition cost decreased by 0% this month</p>
+          <p className="text-slate-700">• High churn risk detected for Product </p>
           <button className="text-sm text-indigo-600 font-bold hover:underline mt-2">
             View detailed insights →
           </button>

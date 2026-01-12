@@ -13,8 +13,8 @@ const RiskAlert = () => {
         </span>
       </div>
       <h4 className="text-sm font-medium text-slate-500 mb-1">Risk Alert</h4>
-      <p className="text-2xl font-bold text-slate-900">3 Issues</p>
-      <p className="text-xs text-slate-400 mt-2">2 require immediate attention</p>
+      <p className="text-2xl font-bold text-slate-900">0 Issues</p>
+      <p className="text-xs text-slate-400 mt-2">0 require immediate attention</p>
       <button className="w-full mt-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-bold hover:bg-red-100">
         View Details
       </button>
