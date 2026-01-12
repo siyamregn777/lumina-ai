@@ -23,6 +23,8 @@ import ReportsPage from './src/components/dashboard/ReportsPage';
 import BillingSettings from './src/components/dashboard/BillingSettings';
 import SubscriptionAccount from './src/components/dashboard/SubscriptionAccount';
 import EnvDebug from './src/pages/EnvDebug';
+import DebugPage from './src/pages/Debug';
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +89,7 @@ const App: React.FC = () => {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
             <Route path="/env-debug" element={<EnvDebug />} />
+            <Route path="/debug" element={<DebugPage />} />
             {/* Dashboard with nested routes */}
             <Route 
               path="/dashboard" 
@@ -107,6 +110,36 @@ const App: React.FC = () => {
               element={user?.role === UserRole.ADMIN ? <AdminPanel /> : <Navigate to="/" />} 
             />
           </Routes>
+
+          <button
+            onClick={() => {
+              console.log('=== ENVIRONMENT DEBUG ===');
+              console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+              console.log('Current URL:', window.location.href);
+              console.log('Build Mode:', import.meta.env.MODE);
+              
+              // Test backend
+              fetch(`${import.meta.env.VITE_API_URL}/api/health`)
+                .then(r => r.json())
+                .then(data => console.log('Backend:', data))
+                .catch(err => console.error('Backend Error:', err));
+            }}
+            style={{
+              position: 'fixed',
+              bottom: '10px',
+              right: '10px',
+              padding: '5px 10px',
+              fontSize: '12px',
+              backgroundColor: '#333',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              zIndex: 9999
+            }}
+          >
+            🔧 Debug
+          </button>
           
         </main>
         <Footer />
