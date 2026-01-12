@@ -19,6 +19,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1NGTnugpldZs1XDpRGBWsSj
 3. Run the app:
    `npm run dev`
 
+
 Deploy url
 
 https://lumina-ai-green.vercel.app/
