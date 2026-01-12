@@ -156,6 +156,79 @@ app.post('/api/create-checkout-session', async (req, res) => {
   }
 });
 
+
+// Add this endpoint to server.js
+// Add this endpoint to your server.js, after the /api/create-checkout-session endpoint
+app.post('/api/verify-session', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    
+    console.log('Verifying session:', sessionId);
+    
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    
+    // Retrieve the session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription', 'customer']
+    });
+
+    console.log('Session status:', {
+      id: session.id,
+      payment_status: session.payment_status,
+      status: session.status,
+      metadata: session.metadata
+    });
+
+    // Check if payment was successful
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ 
+        error: 'Payment not completed',
+        payment_status: session.payment_status,
+        status: session.status 
+      });
+    }
+
+    // Extract relevant data
+    const userId = session.metadata?.userId;
+    const planId = session.metadata?.planId;
+    const billingCycle = session.metadata?.billingCycle;
+    const subscriptionId = session.subscription?.id;
+    const customerId = session.customer?.id;
+
+    console.log(`✅ Payment verified for user ${userId}, plan ${planId}`);
+
+    res.json({
+      success: true,
+      userId,
+      planId,
+      billingCycle,
+      subscriptionId,
+      customerId,
+      amountPaid: session.amount_total ? session.amount_total / 100 : 0, // Convert from cents
+      currency: session.currency,
+      paymentStatus: session.payment_status,
+      status: session.status,
+      subscriptionStatus: session.subscription?.status
+    });
+  } catch (error) {
+    console.error('❌ Session verification error:', error);
+    
+    // Check if it's a Stripe error
+    if (error.type === 'StripeInvalidRequestError') {
+      return res.status(400).json({ 
+        error: 'Invalid session ID',
+        message: error.message 
+      });
+    }
+    
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Webhook endpoint (for future use)
 app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];

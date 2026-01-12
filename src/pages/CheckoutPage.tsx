@@ -110,21 +110,22 @@ const CheckoutPage: React.FC = () => {
     console.log('Current Origin:', currentOrigin);
     console.log('Plan:', plan);
 
-    const response = await fetch(`${config.apiUrl}/api/create-checkout-session`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      userId: user.id,
-      planId: plan.id,
-      billingCycle: plan.billingCycle,
-      userEmail: user.email,
-      // Use dynamic origin
-      successUrl: `${config.getCurrentOrigin()}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${config.getCurrentOrigin()}/pricing`,
-    }),
-  });
+    // Use the SAME URL variable consistently
+    const response = await fetch(`${apiUrl}/api/create-checkout-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: user.id,
+        planId: plan.id.toLowerCase(), // Ensure lowercase
+        billingCycle: plan.billingCycle.toLowerCase(), // Ensure lowercase
+        userEmail: user.email,
+        // Use consistent origin - remove config.getCurrentOrigin()
+        successUrl: `${currentOrigin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${currentOrigin}/checkout/cancel`,
+      }),
+    });
 
     console.log('Response Status:', response.status);
 

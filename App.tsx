@@ -24,6 +24,9 @@ import BillingSettings from './src/components/dashboard/BillingSettings';
 import SubscriptionAccount from './src/components/dashboard/SubscriptionAccount';
 import EnvDebug from './src/pages/EnvDebug';
 import DebugPage from './src/pages/Debug';
+import DashboardWrapper from './src/components/DashboardWrapper';
+import CheckoutSuccess from './src/pages/CheckoutSuccess';
+import CheckoutCancel from './src/pages/CheckoutCancel';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -90,12 +93,16 @@ const App: React.FC = () => {
             <Route path="/checkout" element={user ? <CheckoutPage /> : <Navigate to="/login" />} />
             <Route path="/env-debug" element={<EnvDebug />} />
             <Route path="/debug" element={<DebugPage />} />
+            <Route path="/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             {/* Dashboard with nested routes */}
             <Route 
               path="/dashboard" 
               element={user ? <Dashboard user={user} setUser={setUser} /> : <Navigate to="/login" />} 
             >
-              <Route index element={<DashboardOverview user={user} />} />
+              {/* <Route index element={<DashboardOverview user={user} />} /> */}
+              <Route path="/dashboard" element={<DashboardWrapper />} />
+
               <Route path="ai-chat" element={<AIChatPanel />} />
               <Route path="data-upload" element={<DataUpload />} />
               <Route path="insights" element={<InsightsPage />} />
