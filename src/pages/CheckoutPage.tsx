@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, CreditCard, Shield, CheckCircle } from 'lucide-react';
+import { config } from '../utils/env';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -109,23 +110,21 @@ const CheckoutPage: React.FC = () => {
     console.log('Current Origin:', currentOrigin);
     console.log('Plan:', plan);
 
-    const response = await fetch(`${apiUrl}/api/create-checkout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add origin header explicitly
-        'Origin': currentOrigin
-      },
-      body: JSON.stringify({
-        userId: user.id,
-        planId: plan.id,
-        billingCycle: plan.billingCycle,
-        userEmail: user.email,
-        // EXPLICITLY set local URLs
-        successUrl: `${currentOrigin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${currentOrigin}/pricing`,
-      }),
-    });
+    const response = await fetch(`${config.apiUrl}/api/create-checkout-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId: user.id,
+      planId: plan.id,
+      billingCycle: plan.billingCycle,
+      userEmail: user.email,
+      // Use dynamic origin
+      successUrl: `${config.getCurrentOrigin()}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${config.getCurrentOrigin()}/pricing`,
+    }),
+  });
 
     console.log('Response Status:', response.status);
 
