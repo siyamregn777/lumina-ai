@@ -14,10 +14,10 @@ const Hero: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <div className="inline-flex items-center space-x-2 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-1.5 mb-8 animate-subtle-float">
+          {/* <div className="inline-flex items-center space-x-2 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-1.5 mb-8 animate-subtle-float">
             <span className="bg-indigo-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">New</span>
             <span className="text-indigo-600 text-sm font-medium"> AI-generated ideas, refined into real products</span>
-          </div>
+          </div> */}
           
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-6 font-heading">
             Automate your business <br />
