@@ -120,7 +120,7 @@ const App: React.FC = () => {
               element={user?.role === UserRole.ADMIN ? <AdminPanel /> : <Navigate to="/" />} 
             />
           </Routes>
-          <button
+          {/* <button
             onClick={() => {
               console.log('=== ENVIRONMENT DEBUG ===');
               console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
@@ -149,7 +149,7 @@ const App: React.FC = () => {
           >
             🔧 Debug
           </button>
-          
+           */}
         </main>
         <Footer />
       </div>
