@@ -8,11 +8,9 @@ export enum UserRole {
 }
 
 export enum SubscriptionPlan {
-  FREE = 'FREE',
   STARTER = 'STARTER',
   PROFESSIONAL = 'PROFESSIONAL',
   ENTERPRISE = 'ENTERPRISE',
-  CUSTOM = 'CUSTOM'
 }
 
 export enum BillingCycle {

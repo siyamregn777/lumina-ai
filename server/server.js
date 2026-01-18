@@ -1,281 +1,53 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import express from 'express';
-import Stripe from 'stripe';
-import cors from 'cors';
-
-// Get current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment based on NODE_ENV
-const envFile = process.env.NODE_ENV === 'production' 
-  ? '.env.production' 
-  : '.env.development';
-
-dotenv.config({ 
-  path: path.join(__dirname, envFile) 
-});
-
-console.log('=== SERVER STARTUP ===');
-console.log('Environment:', process.env.NODE_ENV);
-console.log('Loading from:', envFile);
-console.log('Frontend URL:', process.env.FRONTEND_URL);
-console.log('Port:', process.env.PORT);
-console.log('Stripe configured:', !!process.env.STRIPE_SECRET_KEY);
-console.log('=====================');
+import { config } from './config/index.js';
+import { corsMiddleware } from './middleware/cors.js';
+import { logger } from './utils/logger.js';
+import paymentRoutes from './routes/paymentRoutes.js';
+import healthRoutes from './routes/healthRoutes.js';
 
 const app = express();
-const isProduction = process.env.NODE_ENV === 'production';
 
-// CORS Configuration
-const allowedOrigins = isProduction
-  ? [
-      'https://lumina-ai-green.vercel.app',
-      'https://lumina-ai.vercel.app',
-    ]
-  : [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://127.0.0.1:3000'
-    ];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) === -1) {
-      console.warn(`CORS blocked: ${origin}`);
-      return callback(new Error('Not allowed by CORS'), false);
-    }
-    return callback(null, true);
-  },
-  credentials: true,
-  optionsSuccessStatus: 200
-}));
-
+// Middleware
+app.use(corsMiddleware);
 app.use(express.json());
+app.use(logger.request);
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
+// Routes
+app.use('/api', healthRoutes);
+app.use('/api', paymentRoutes);
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    service: 'Lumina AI Backend',
-    environment: process.env.NODE_ENV,
-    frontend: process.env.FRONTEND_URL,
-    timestamp: new Date().toISOString(),
-    allowedOrigins: allowedOrigins
-  });
-});
-
-// Test endpoint
-app.get('/api/test', (req, res) => {
-  res.json({
-    message: 'Backend is working!',
-    environment: process.env.NODE_ENV,
-    origin: req.headers.origin,
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.originalUrl} not found`,
     timestamp: new Date().toISOString()
   });
 });
 
-// Stripe checkout endpoint
-app.post('/api/create-checkout-session', async (req, res) => {
-  try {
-    console.log('Creating checkout session for:', req.body.userEmail);
-    
-    const { userId, planId, billingCycle, userEmail, successUrl, cancelUrl } = req.body;
-
-    // Determine base URL for redirects
-    let baseUrl;
-    if (successUrl) {
-      try {
-        baseUrl = new URL(successUrl).origin;
-      } catch (error) {
-        baseUrl = process.env.FRONTEND_URL;
-      }
-    } else {
-      baseUrl = req.headers.origin || process.env.FRONTEND_URL;
-    }
-
-    console.log('Base URL for redirects:', baseUrl);
-
-    const priceMap = {
-      pro: {
-        monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
-        yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
-      },
-      enterprise: {
-        monthly: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
-        yearly: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID,
-      },
-    };
-
-    const priceId = priceMap[planId]?.[billingCycle];
-    if (!priceId) {
-      console.error(`Invalid plan/billing: ${planId}/${billingCycle}`);
-      return res.status(400).json({ 
-        error: 'Invalid plan or billing cycle',
-        availablePlans: Object.keys(priceMap)
-      });
-    }
-
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-    // Use provided URLs or construct from baseUrl
-    const finalSuccessUrl = successUrl || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
-    const finalCancelUrl = cancelUrl || `${baseUrl}/pricing`;
-
-    console.log('Success URL:', finalSuccessUrl);
-    console.log('Cancel URL:', finalCancelUrl);
-
-    const session = await stripe.checkout.sessions.create({
-      customer_email: userEmail,
-      client_reference_id: userId,
-      payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
-      mode: 'subscription',
-      success_url: finalSuccessUrl,
-      cancel_url: finalCancelUrl,
-      metadata: { userId, planId, billingCycle },
-    });
-
-    console.log(`✅ Checkout session created: ${session.id}`);
-
-    res.json({ sessionId: session.id });
-  } catch (error) {
-    console.error('❌ Stripe error:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-// Add this endpoint to server.js
-// Add this endpoint to your server.js, after the /api/create-checkout-session endpoint
-app.post('/api/verify-session', async (req, res) => {
-  try {
-    const { sessionId } = req.body;
-    
-    console.log('Verifying session:', sessionId);
-    
-    if (!sessionId) {
-      return res.status(400).json({ error: 'Session ID is required' });
-    }
-
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-    
-    // Retrieve the session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['subscription', 'customer']
-    });
-
-    console.log('Session status:', {
-      id: session.id,
-      payment_status: session.payment_status,
-      status: session.status,
-      metadata: session.metadata
-    });
-
-    // Check if payment was successful
-    if (session.payment_status !== 'paid') {
-      return res.status(400).json({ 
-        error: 'Payment not completed',
-        payment_status: session.payment_status,
-        status: session.status 
-      });
-    }
-
-    // Extract relevant data
-    const userId = session.metadata?.userId;
-    const planId = session.metadata?.planId;
-    const billingCycle = session.metadata?.billingCycle;
-    const subscriptionId = session.subscription?.id;
-    const customerId = session.customer?.id;
-
-    console.log(`✅ Payment verified for user ${userId}, plan ${planId}`);
-
-    res.json({
-      success: true,
-      userId,
-      planId,
-      billingCycle,
-      subscriptionId,
-      customerId,
-      amountPaid: session.amount_total ? session.amount_total / 100 : 0, // Convert from cents
-      currency: session.currency,
-      paymentStatus: session.payment_status,
-      status: session.status,
-      subscriptionStatus: session.subscription?.status
-    });
-  } catch (error) {
-    console.error('❌ Session verification error:', error);
-    
-    // Check if it's a Stripe error
-    if (error.type === 'StripeInvalidRequestError') {
-      return res.status(400).json({ 
-        error: 'Invalid session ID',
-        message: error.message 
-      });
-    }
-    
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Webhook endpoint (for future use)
-app.post('/api/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!endpointSecret) {
-    console.log('⚠️ Webhook secret not configured');
-    return res.status(400).send('Webhook secret not configured');
-  }
-
-  let event;
-
-  try {
-    event = Stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    console.error('❌ Webhook signature verification failed:', err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  console.log(`Webhook received: ${event.type}`);
-
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
-      console.log('Checkout completed for:', session.customer_email);
-      // TODO: Update user subscription in your database
-      break;
-    default:
-      console.log(`Unhandled event type: ${event.type}`);
-  }
-
-  res.json({ received: true });
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Start server
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 app.listen(PORT, () => {
   console.log(`
 🚀 Lumina AI Backend Server
 ────────────────────────────
 📡 Port: ${PORT}
-🌐 Environment: ${process.env.NODE_ENV || 'development'}
-🔗 Frontend: ${process.env.FRONTEND_URL}
-💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Configured' : '❌ Missing'}
+🌐 Environment: ${config.nodeEnv}
+🔗 Frontend: ${config.frontendUrl}
+💳 Stripe: ${config.stripe.secretKey ? '✅ Configured' : '❌ Missing'}
 📋 Health: http://localhost:${PORT}/api/health
-🔓 CORS: ${isProduction ? 'Restricted to production domains' : 'Open for development'}
 ────────────────────────────
 `);
 });
+
+export default app;

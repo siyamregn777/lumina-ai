@@ -16,31 +16,71 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const selectedPlan = searchParams.get('plan') || SubscriptionPlan.FREE;
+  const selectedPlan = searchParams.get('plan') || SubscriptionPlan.STARTER;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-          role: UserRole.USER,
-          subscription: selectedPlan,
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role: UserRole.USER,
+            subscription: selectedPlan,
+          },
+          // This ensures email confirmation is sent
+          emailRedirectTo: `${window.location.origin}`,
         }
-      }
-    });
+      });
 
-    if (error) {
-      setError(error.message);
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (authData.user) {
+        console.log('User created:', authData.user.id);
+        
+        // Check if email needs confirmation
+        if (authData.user.identities && authData.user.identities.length === 0) {
+          // Email confirmation needed
+          setError('Registration successful! Please check your email to verify your account.');
+          
+          // You can also manually create the user in your table for pending confirmation
+          const { error: dbError } = await supabase
+            .from('users')
+            .insert({
+              id: authData.user.id,
+              email: email,
+              full_name: name,
+              role: UserRole.USER,
+              subscription: selectedPlan,
+              created_at: new Date().toISOString(),
+              email_confirmed: false, // Add this column to your table
+            });
+
+          if (dbError && !dbError.message.includes('duplicate key')) {
+            console.error('DB insert error:', dbError);
+          }
+          
+          // Show success message but don't navigate
+          setTimeout(() => {
+            navigate('/login?message=check-email');
+          }, 3000);
+          return;
+        }
+        
+        // Email already confirmed (shouldn't happen with new signups usually)
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Registration failed');
+    } finally {
       setIsLoading(false);
-    } else {
-      // Supabase auto-logs in after signup depending on project settings
-      navigate('/dashboard');
     }
   };
 
