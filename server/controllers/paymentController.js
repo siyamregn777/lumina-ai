@@ -12,43 +12,124 @@ const stripeService = new StripeService();
 
 async function updateUserSubscription(userId, planId, subscriptionData) {
   try {
-    console.log(`Updating user ${userId} to plan ${planId}`);
-    
+    console.log(`=== UPDATE USER SUBSCRIPTION ===`);
+    console.log('User ID:', userId);
+    console.log('Plan ID:', planId);
+    console.log('Subscription Data:', {
+      customerId: subscriptionData.customerId,
+      subscriptionId: subscriptionData.subscriptionId,
+      hasSession: !!subscriptionData.session
+    });
+
     // Map Stripe planId to your SubscriptionPlan enum
     const planMap = {
+      'pro': 'PROFESSIONAL',
+      'enterprise': 'ENTERPRISE',
       'PROFESSIONAL': 'PROFESSIONAL',
-      'ENTERPRISE': 'ENTERPRISE',
-      'pro': 'PROFESSIONAL', // Handle lowercase if needed
-      'enterprise': 'ENTERPRISE'
+      'ENTERPRISE': 'ENTERPRISE'
     };
 
     const subscriptionPlan = planMap[planId] || planId;
-    
+    console.log('Mapped subscription plan:', subscriptionPlan);
+
+    // First, check if user exists
+    console.log('Checking if user exists in database...');
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('users')
+      .select('id, email, subscription, subscription_status')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('❌ User not found in database:', fetchError);
+      console.log('Creating new user record...');
+      
+      // Try to insert new user
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email: subscriptionData.userEmail || 'unknown@email.com',
+          subscription: subscriptionPlan,
+          subscription_status: 'active',
+          stripe_customer_id: subscriptionData.customerId,
+          stripe_subscription_id: subscriptionData.subscriptionId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select();
+
+      if (insertError) {
+        console.error('❌ Failed to create user:', insertError);
+        throw insertError;
+      }
+
+      console.log('✅ Created new user record:', newUser);
+      return newUser;
+    }
+
+    console.log('✅ User found in database:', {
+      email: existingUser.email,
+      currentSubscription: existingUser.subscription,
+      currentStatus: existingUser.subscription_status
+    });
+
+    // Prepare update data
+    const updateData = {
+      subscription: subscriptionPlan,
+      subscription_status: 'active',
+      stripe_customer_id: subscriptionData.customerId,
+      stripe_subscription_id: subscriptionData.subscriptionId,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add current_period_end if available
+    if (subscriptionData.session?.subscription?.current_period_end) {
+      updateData.current_period_end = new Date(
+        subscriptionData.session.subscription.current_period_end * 1000
+      ).toISOString();
+    }
+
+    console.log('Attempting update with data:', updateData);
+
     // Update user in database
     const { data, error } = await supabase
       .from('users')
-      .update({
-        subscription: subscriptionPlan,
-        subscription_status: 'active',
-        stripe_customer_id: subscriptionData.customerId,
-        stripe_subscription_id: subscriptionData.subscriptionId,
-        current_period_end: subscriptionData.session?.subscription?.current_period_end 
-          ? new Date(subscriptionData.session.subscription.current_period_end * 1000).toISOString()
-          : null,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', userId)
       .select();
 
     if (error) {
-      console.error('Failed to update user subscription:', error);
-      throw error;
+      console.error('❌ Update failed:', error);
+      console.error('Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // Try without SELECT to see if it's a SELECT permission issue
+      console.log('Trying update without SELECT...');
+      const { error: updateOnlyError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId);
+      
+      if (updateOnlyError) {
+        console.error('❌ Update only also failed:', updateOnlyError);
+        throw updateOnlyError;
+      } else {
+        console.log('✅ Update succeeded (without SELECT)');
+        return [{ id: userId, ...updateData }];
+      }
     }
 
     console.log(`✅ Updated user ${userId} to ${subscriptionPlan} subscription`);
+    console.log('Update result:', data);
     return data;
   } catch (error) {
-    console.error('Error updating user subscription:', error);
+    console.error('❌ Error in updateUserSubscription:', error);
+    console.error('Stack trace:', error.stack);
     throw error;
   }
 }
@@ -135,8 +216,9 @@ export const paymentController = {
     }
 
     console.log('Base URL for redirects:', baseUrl);
-
-    const finalSuccessUrl = successUrl || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+    // In createCheckoutSession function
+    const finalSuccessUrl = `${baseUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
+    // const finalSuccessUrl = successUrl || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
     const finalCancelUrl = cancelUrl || `${baseUrl}/pricing`;
 
     console.log('Success URL:', finalSuccessUrl);
@@ -192,7 +274,12 @@ export const paymentController = {
 
       // Update user's subscription in database
       if (result.userId) {
-        await updateUserSubscription(result.userId, result.planId, result);
+        await updateUserSubscription(
+          result.userId,
+          result.planId.toUpperCase(),
+          result
+        );
+
       }
 
       res.json({

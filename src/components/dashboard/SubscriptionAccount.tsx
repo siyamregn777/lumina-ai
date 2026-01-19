@@ -17,11 +17,14 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { useLocation } from 'react-router-dom';
 
 const SubscriptionAccount = ({ user }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [invoices, setInvoices] = useState([]);
+  const location = useLocation();
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [accountDetails, setAccountDetails] = useState({
     companyName: '',
     timezone: 'UTC',
@@ -37,12 +40,80 @@ const SubscriptionAccount = ({ user }) => {
     marketing: false
   });
 
-  useEffect(() => {
-    // Fetch user's invoices from Stripe (you'll need to implement this)
-    fetchInvoices();
-    // Load account details
-    loadAccountDetails();
-  }, []);
+useEffect(() => {
+  const params = new URLSearchParams(location.search);
+  const sessionId = params.get('session_id');
+
+  console.log('=== PAYMENT VERIFICATION DEBUG ===');
+  console.log('Session ID from URL:', sessionId);
+  console.log('Current user:', user);
+  console.log('Current user subscription:', user?.subscription);
+  
+  if (!sessionId) {
+    console.log('No session ID found in URL');
+    return;
+  }
+
+  const verifyPayment = async () => {
+    try {
+      console.log('Starting payment verification...');
+      setVerifyingPayment(true);
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      console.log('Calling API:', `${apiUrl}/api/verify-session`);
+      
+      const res = await fetch(
+        `${apiUrl}/api/verify-session`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        }
+      );
+
+      console.log('API Response status:', res.status);
+      console.log('API Response headers:', res.headers);
+      
+      const responseText = await res.text();
+      console.log('API Response text:', responseText);
+
+      if (!res.ok) {
+        throw new Error(`Verification failed: ${res.status} - ${responseText}`);
+      }
+
+      const data = JSON.parse(responseText);
+      console.log('✅ Payment verification successful:', data);
+
+      // Re-fetch updated subscription
+      console.log('Fetching updated user data from database...');
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('subscription, subscription_status, stripe_subscription_id')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Failed to fetch updated user:', error);
+      } else {
+        console.log('Updated user data from database:', userData);
+        // Update user object in parent component or context
+        // You need to pass a callback from parent or use context
+      }
+
+      // Clean URL
+      console.log('Cleaning URL...');
+      navigate('/dashboard/subscription', { replace: true });
+
+    } catch (err) {
+      console.error('❌ Payment verification error:', err);
+    } finally {
+      console.log('Verification process completed');
+      setVerifyingPayment(false);
+    }
+  };
+
+  verifyPayment();
+}, [location.search, navigate, user?.id]);
 
   const fetchInvoices = async () => {
     // Simulate fetching invoices - replace with actual Stripe API call
@@ -56,7 +127,7 @@ const SubscriptionAccount = ({ user }) => {
   const loadAccountDetails = async () => {
     // Load saved account details
     const { data } = await supabase
-      .from('profiles')
+      .from('users')
       .select('company_name, timezone, language, currency')
       .eq('id', user.id)
       .single();
@@ -74,7 +145,7 @@ const SubscriptionAccount = ({ user }) => {
   const saveAccountDetails = async () => {
     setLoading(true);
     await supabase
-      .from('profiles')
+      .from('users')
       .upsert({
         id: user.id,
         company_name: accountDetails.companyName,
@@ -84,6 +155,13 @@ const SubscriptionAccount = ({ user }) => {
         updated_at: new Date().toISOString()
       });
     setLoading(false);
+  };
+  const normalizePlanForUI = (plan) => {
+    if (!plan) return 'starter';
+
+    return plan.toLowerCase() === 'professional'
+      ? 'pro'
+      : plan.toLowerCase();
   };
 
   const getPlanDetails = (plan) => {
@@ -124,7 +202,10 @@ const SubscriptionAccount = ({ user }) => {
     return plans[plan] || plans.free;
   };
 
-  const planDetails = getPlanDetails(user.subscription);
+  const planDetails = getPlanDetails(
+    normalizePlanForUI(user.subscription)
+  );
+
 
   const handleUpgrade = () => {
     navigate('/pricing');
