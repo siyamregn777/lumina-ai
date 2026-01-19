@@ -55,90 +55,130 @@ async function updateUserSubscription(userId, planId, subscriptionData) {
 
 export const paymentController = {
   createCheckoutSession: async (req, res) => {
-    try {
-      console.log('Creating checkout session for:', req.body.userEmail);
+  try {
+    console.log('Creating checkout session for:', req.body.userEmail);
+    console.log('Full request body:', req.body);
+    
+    const { userId, planId, billingCycle, userEmail, successUrl, cancelUrl } = req.body;
+
+    // ✅ ACCEPT BOTH UPPERCASE AND LOWERCASE
+    const normalizedPlanId = (planId || '').toUpperCase();
+    const normalizedBillingCycle = (billingCycle || '').toLowerCase();
+
+    console.log('Normalized values:', {
+      originalPlanId: planId,
+      normalizedPlanId,
+      originalBilling: billingCycle,
+      normalizedBillingCycle
+    });
+
+    // ✅ VALIDATE: Accept both uppercase and lowercase input
+    const validPlans = ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'];
+    const validBilling = ['monthly', 'yearly'];
+    
+    // Check if plan is valid (after normalization)
+    if (!validPlans.includes(normalizedPlanId)) {
+      return res.status(400).json({
+        error: 'Invalid plan',
+        message: 'Plan must be STARTER, PROFESSIONAL, or ENTERPRISE (case insensitive)',
+        received: planId,
+        normalized: normalizedPlanId,
+        allowed: validPlans
+      });
+    }
+
+    if (!validBilling.includes(normalizedBillingCycle)) {
+      return res.status(400).json({
+        error: 'Invalid billing cycle',
+        message: 'Billing cycle must be MONTHLY or YEARLY (case insensitive)',
+        received: billingCycle,
+        normalized: normalizedBillingCycle,
+        allowed: validBilling
+      });
+    }
+
+    // Handle free plan
+    if (normalizedPlanId === 'STARTER') {
+      console.log('Handling free STARTER plan signup');
       
-      const { userId, planId, billingCycle, userEmail, successUrl, cancelUrl } = req.body;
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({
+          subscription: 'STARTER',
+          subscription_status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
 
-      // Validate planId
-      if (!['STARTER', 'PROFESSIONAL', 'ENTERPRISE'].includes(planId)) {
-        return res.status(400).json({
-          error: 'Invalid plan',
-          message: 'Plan must be STARTER, PROFESSIONAL, or ENTERPRISE'
-        });
+      if (dbError) {
+        console.error('Failed to update to starter plan:', dbError);
+        return res.status(500).json({ error: 'Failed to activate starter plan' });
       }
 
-      // If it's STARTER plan (free), just update database and return
-      if (planId === 'STARTER') {
-        console.log('Handling free STARTER plan signup');
-        
-        // Update user to STARTER plan in database
-        const { error: dbError } = await supabase
-          .from('users')
-          .update({
-            subscription: 'STARTER',
-            subscription_status: 'active',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
+      return res.json({
+        success: true,
+        message: 'Starter plan activated successfully',
+        planId: 'STARTER'
+      });
+    }
 
-        if (dbError) {
-          console.error('Failed to update to starter plan:', dbError);
-        }
-
-        return res.json({
-          success: true,
-          message: 'Starter plan activated successfully',
-          planId: 'STARTER'
-        });
-      }
-
-      // For paid plans, create Stripe checkout
-      let baseUrl;
-      if (successUrl) {
-        try {
-          baseUrl = new URL(successUrl).origin;
-        } catch (error) {
-          baseUrl = req.headers.origin || config.frontendUrl;
-        }
-      } else {
+    // For paid plans, create Stripe checkout
+    let baseUrl;
+    if (successUrl) {
+      try {
+        baseUrl = new URL(successUrl).origin;
+      } catch (error) {
         baseUrl = req.headers.origin || config.frontendUrl;
       }
-
-      console.log('Base URL for redirects:', baseUrl);
-
-      const finalSuccessUrl = successUrl || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
-      const finalCancelUrl = cancelUrl || `${baseUrl}/pricing`;
-
-      console.log('Success URL:', finalSuccessUrl);
-      console.log('Cancel URL:', finalCancelUrl);
-
-      const session = await stripeService.createCheckoutSession({
-        userId,
-        planId,
-        billingCycle,
-        userEmail,
-        successUrl: finalSuccessUrl,
-        cancelUrl: finalCancelUrl
-      });
-
-      console.log(`✅ Checkout session created: ${session.id}`);
-
-      res.json({ sessionId: session.id });
-    } catch (error) {
-      console.error('❌ Stripe error:', error.message);
-      
-      if (error.message.includes('Invalid plan/billing')) {
-        return res.status(400).json({ 
-          error: error.message,
-          availablePlans: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-          availableBilling: ['MONTHLY', 'YEARLY']
-        });
-      }
-      
-      res.status(500).json({ error: error.message });
+    } else {
+      baseUrl = req.headers.origin || config.frontendUrl;
     }
-  },
+
+    console.log('Base URL for redirects:', baseUrl);
+
+    const finalSuccessUrl = successUrl || `${baseUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`;
+    const finalCancelUrl = cancelUrl || `${baseUrl}/pricing`;
+
+    console.log('Success URL:', finalSuccessUrl);
+    console.log('Cancel URL:', finalCancelUrl);
+
+    // ✅ Map to Stripe product names (Stripe uses lowercase 'pro' and 'enterprise')
+    const stripePlanMap = {
+      'PROFESSIONAL': 'pro',
+      'ENTERPRISE': 'enterprise'
+    };
+
+    const stripePlanId = stripePlanMap[normalizedPlanId];
+    if (!stripePlanId) {
+      return res.status(400).json({
+        error: 'Invalid plan for Stripe',
+        message: `Plan ${normalizedPlanId} cannot be processed through Stripe`
+      });
+    }
+
+    // ✅ Call Stripe service with lowercase values
+    const session = await stripeService.createCheckoutSession({
+      userId,
+      planId: stripePlanId,           // lowercase for Stripe
+      billingCycle: normalizedBillingCycle, // already lowercase
+      userEmail,
+      successUrl: finalSuccessUrl,
+      cancelUrl: finalCancelUrl
+    });
+
+    console.log(`✅ Checkout session created: ${session.id}`);
+
+    res.json({ sessionId: session.id });
+  } catch (error) {
+    console.error('❌ Stripe error:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    res.status(500).json({ 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+},
 
   verifySession: async (req, res) => {
     try {

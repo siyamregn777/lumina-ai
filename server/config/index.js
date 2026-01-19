@@ -7,14 +7,7 @@ const __dirname = path.dirname(__filename);
 
 // Load from server root
 const serverRoot = path.join(__dirname, '..');
-
-// Load environment
 dotenv.config({ path: path.join(serverRoot, '.env.development') });
-
-// Fallback to .env
-if (!process.env.STRIPE_SECRET_KEY) {
-  dotenv.config({ path: path.join(serverRoot, '.env') });
-}
 
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -55,9 +48,11 @@ console.log('Environment:', config.nodeEnv);
 console.log('Port:', config.port);
 console.log('Frontend URL:', config.frontendUrl);
 console.log('Stripe configured:', !!config.stripe.secretKey);
-console.log('Starter price ID:', config.stripe.starterPriceId);
-console.log('Pro monthly price ID:', config.stripe.proMonthlyPriceId);
-console.log('Supabase configured:', !!config.supabase.url);
+console.log('Supabase URL:', config.supabase.url);
+console.log('Supabase Anon Key (first 30 chars):', 
+  config.supabase.anonKey ? config.supabase.anonKey.substring(0, 30) + '...' : 'Not found'
+);
+console.log('Supabase Service Key exists:', !!config.supabase.serviceRoleKey);
 console.log('=====================');
 
 export default config;

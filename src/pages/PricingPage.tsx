@@ -1,7 +1,7 @@
 // pages/PricingPage.tsx
 import React, { useState } from 'react';
 import { Check, Zap, Sparkles, Star, TrendingDown, Crown, Gift, Rocket } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 interface PricingTier {
   id: string;
@@ -15,11 +15,11 @@ interface PricingTier {
   icon: React.ReactNode;
   isFree?: boolean;
   ctaText: string;
-  ctaLink: string;
   ctaVariant: 'primary' | 'secondary' | 'free';
 }
 
 const PricingPage: React.FC = () => {
+  const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   
   // Base discount for yearly (25%)
@@ -35,7 +35,7 @@ const PricingPage: React.FC = () => {
   // Generate pricing tiers with recursive discounts
   const pricingTiers: PricingTier[] = [
     {
-      id: 'starter',
+      id: 'STARTER',
       name: 'Starter',
       description: 'Perfect for individuals and small projects getting started',
       monthlyPrice: 0,
@@ -56,11 +56,10 @@ const PricingPage: React.FC = () => {
       icon: <Rocket className="w-6 h-6 text-green-500" />,
       isFree: true,
       ctaText: 'Get Started Free',
-      ctaLink: '/register',
       ctaVariant: 'free',
     },
     {
-      id: 'pro',
+      id: 'PROFESSIONAL',
       name: 'Professional',
       description: 'For growing teams and serious projects',
       monthlyPrice: 9,
@@ -85,11 +84,10 @@ const PricingPage: React.FC = () => {
       recommendedFor: 'Startups & Growing Businesses',
       icon: <Sparkles className="w-6 h-6 text-purple-500" />,
       ctaText: 'Start 14-Day Free Trial',
-      ctaLink: '/register',
       ctaVariant: 'primary',
     },
     {
-      id: 'enterprise',
+      id: 'ENTERPRISE',
       name: 'Enterprise',
       description: 'For large organizations with mission-critical needs',
       monthlyPrice: 99,
@@ -115,7 +113,6 @@ const PricingPage: React.FC = () => {
       recommendedFor: 'Large Organizations & Enterprises',
       icon: <Crown className="w-6 h-6 text-amber-500" />,
       ctaText: 'Contact Sales',
-      ctaLink: '/contact',
       ctaVariant: 'secondary',
     },
   ];
@@ -143,6 +140,32 @@ const PricingPage: React.FC = () => {
     { years: 4, discount: calculateRecursiveDiscount(4) * 100, isBestValue: true },
     { years: 5, discount: calculateRecursiveDiscount(5) * 100 },
   ];
+
+  // Handle CTA click with debugging
+  // In PricingPage.tsx
+const handleCtaClick = (tier: PricingTier) => {
+  console.log('CTA Clicked:', {
+    tierId: tier.id,
+    tierName: tier.name,
+    billingCycle,
+    isFree: tier.isFree
+  });
+
+  if (tier.id === 'STARTER') {
+    console.log('Navigating to /register');
+    navigate('/register');
+  } else if (tier.id === 'PROFESSIONAL') {
+    // Pass lowercase 'pro' instead of 'PROFESSIONAL'
+    const url = `/checkout?plan=pro&cycle=${billingCycle}`;
+    console.log('Navigating to:', url);
+    navigate(url);
+  } else if (tier.id === 'ENTERPRISE') {
+    // Pass lowercase 'enterprise' instead of 'ENTERPRISE'
+    const url = `/checkout?plan=enterprise&cycle=${billingCycle}`;
+    console.log('Navigating to:', url);
+    navigate(url);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
@@ -174,12 +197,12 @@ const PricingPage: React.FC = () => {
                   Our Starter plan includes 500 AI queries/month, basic analytics, and community support — no credit card required.
                 </p>
               </div>
-              <Link
-                to="/register"
+              <button
+                onClick={() => navigate('/register')}
                 className="ml-4 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all"
               >
                 Get Started Free
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -347,39 +370,26 @@ const PricingPage: React.FC = () => {
 
                 {/* CTA Button */}
                 <div className="mt-auto">
-                  {tier.id === 'starter' ? (
-                    <Link
-                      to="/register"
-                      className={`block w-full py-3 px-6 rounded-lg text-center font-semibold transition-all ${
-                        tier.ctaVariant === 'free'
-                          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
-                          : tier.ctaVariant === 'primary'
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700'
-                          : 'bg-gray-900 text-white hover:bg-gray-800'
-                      }`}
-                    >
-                      {tier.ctaText}
-                    </Link>
-                  ) : (
-                    <Link
-                      to={`/checkout?plan=${tier.id}&cycle=${billingCycle}`}
-                      className={`block w-full py-3 px-6 rounded-lg text-center font-semibold transition-all ${
-                        tier.ctaVariant === 'primary'
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700'
-                          : 'bg-gray-900 text-white hover:bg-gray-800'
-                      }`}
-                    >
-                      {tier.ctaText}
-                    </Link>
-                  )}
+                  <button
+                    onClick={() => handleCtaClick(tier)}
+                    className={`block w-full py-3 px-6 rounded-lg text-center font-semibold transition-all ${
+                      tier.ctaVariant === 'free'
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
+                        : tier.ctaVariant === 'primary'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    {tier.ctaText}
+                  </button>
                   
-                  {tier.id === 'starter' && (
+                  {tier.isFree && (
                     <p className="text-center text-gray-500 text-sm mt-3">
                       No credit card required • Start in seconds
                     </p>
                   )}
                   
-                  {tier.id === 'enterprise' && (
+                  {tier.id === 'ENTERPRISE' && (
                     <div className="mt-4 text-center">
                       <p className="text-sm text-gray-600">
                         Custom multi-year contracts available with additional volume discounts
@@ -487,19 +497,19 @@ const PricingPage: React.FC = () => {
               Join thousands of businesses already using Lumina AI to drive growth and efficiency.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
+              <button
+                onClick={() => navigate('/register')}
                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
               >
                 <Rocket className="w-5 h-5 mr-2" />
                 Start Free Forever
-              </Link>
-              <Link
-                to="/contact"
+              </button>
+              <button
+                onClick={() => navigate('/checkout?plan=PROFESSIONAL&cycle=monthly')}
                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-semibold rounded-lg text-gray-900 bg-white hover:bg-gray-100"
               >
-                Schedule Enterprise Demo
-              </Link>
+                Start 14-Day Pro Trial
+              </button>
             </div>
             <p className="text-gray-400 text-sm mt-6">
               No credit card required • 14-day free trial on paid plans • Cancel anytime

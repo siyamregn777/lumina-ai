@@ -111,7 +111,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       onPremise: false,
     },
     cta: "Get Started Free",
-    ctaLink: "/signup",
+    ctaLink: "/signup?plan=STARTER",  // Change to uppercase
     highlighted: false,
     mostPopular: false,
     isFree: true,
@@ -148,7 +148,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       onPremise: false,
     },
     cta: "Start Pro Trial",
-    ctaLink: "/signup?plan=pro",
+    ctaLink: "/signup?plan=PROFESSIONAL",  // Change to uppercase
     highlighted: true,
     mostPopular: true,
     isFree: false,
@@ -192,7 +192,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       onPremise: false,
     },
     cta: "Choose Yearly",
-    ctaLink: "/signup?plan=pro_yearly",
+    ctaLink: "/signup?plan=PROFESSIONAL&cycle=yearly",  // Change to uppercase
     highlighted: false,
     mostPopular: false,
     isFree: false,

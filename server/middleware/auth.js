@@ -6,28 +6,42 @@ export const authenticate = (req, res, next) => {
 };
 
 export const validatePaymentData = (req, res, next) => {
-  const { userId, planId, billingCycle, userEmail } = req.body;
-  
+  let { userId, planId, billingCycle, userEmail } = req.body;
+
   if (!userId || !planId || !billingCycle || !userEmail) {
     return res.status(400).json({
       error: 'Missing required fields',
       required: ['userId', 'planId', 'billingCycle', 'userEmail']
     });
   }
-  
-  if (!['pro', 'enterprise'].includes(planId)) {
+
+  // ✅ Normalize FIRST
+  const normalizedPlanId = planId.toUpperCase();
+  const normalizedBillingCycle = billingCycle.toLowerCase();
+
+  // ✅ Accept ALL valid plans
+  const validPlans = ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'];
+  const validBilling = ['monthly', 'yearly'];
+
+  if (!validPlans.includes(normalizedPlanId)) {
     return res.status(400).json({
       error: 'Invalid planId',
-      allowed: ['pro', 'enterprise']
+      received: planId,
+      allowed: validPlans
     });
   }
-  
-  if (!['monthly', 'yearly'].includes(billingCycle)) {
+
+  if (!validBilling.includes(normalizedBillingCycle)) {
     return res.status(400).json({
       error: 'Invalid billingCycle',
-      allowed: ['monthly', 'yearly']
+      received: billingCycle,
+      allowed: validBilling
     });
   }
-  
+
+  // ✅ Overwrite request with normalized values
+  req.body.planId = normalizedPlanId;
+  req.body.billingCycle = normalizedBillingCycle;
+
   next();
 };

@@ -10,39 +10,44 @@ export class StripeService {
   }
 
   getPriceId(planId, billingCycle) {
-    console.log('Getting price for:', { planId, billingCycle });
-    
-    // Convert planId to match your Stripe product names
-    const priceMap = {
-      'STARTER': {  // Starter/free plan
-        MONTHLY: config.stripe.starterPriceId,
-        YEARLY: config.stripe.starterPriceId,
-      },
-      'PROFESSIONAL': {  // Changed from 'pro' to 'PROFESSIONAL'
-        MONTHLY: config.stripe.proMonthlyPriceId,
-        YEARLY: config.stripe.proYearlyPriceId,
-      },
-      'ENTERPRISE': {
-        MONTHLY: config.stripe.enterpriseMonthlyPriceId,
-        YEARLY: config.stripe.enterpriseYearlyPriceId,
-      },
-    };
+  console.log('Getting price for:', { planId, billingCycle });
+  
+  // ✅ Accept both cases, normalize to lowercase for Stripe
+  const normalizedPlanId = (planId || '').toLowerCase();
+  const normalizedBillingCycle = (billingCycle || '').toLowerCase();
+  
+  console.log('Normalized for Stripe:', { normalizedPlanId, normalizedBillingCycle });
+  
+  const priceMap = {
+    'starter': {
+      'monthly': config.stripe.starterPriceId,
+      'yearly': config.stripe.starterPriceId,
+    },
+    'pro': {  // Only lowercase here
+      'monthly': config.stripe.proMonthlyPriceId,
+      'yearly': config.stripe.proYearlyPriceId,
+    },
+    'enterprise': {  // Only lowercase here
+      'monthly': config.stripe.enterpriseMonthlyPriceId,
+      'yearly': config.stripe.enterpriseYearlyPriceId,
+    },
+  };
 
-    const priceId = priceMap[planId]?.[billingCycle];
-    
-    if (!priceId) {
-      console.error('Available price IDs:', {
-        STARTER: config.stripe.starterPriceId,
-        PRO_MONTHLY: config.stripe.proMonthlyPriceId,
-        PRO_YEARLY: config.stripe.proYearlyPriceId,
-        ENTERPRISE_MONTHLY: config.stripe.enterpriseMonthlyPriceId,
-        ENTERPRISE_YEARLY: config.stripe.enterpriseYearlyPriceId,
-      });
-      throw new Error(`Invalid plan/billing: ${planId}/${billingCycle}. Available: STARTER, PROFESSIONAL, ENTERPRISE`);
-    }
-
-    return priceId;
+  const priceId = priceMap[normalizedPlanId]?.[normalizedBillingCycle];
+  
+  if (!priceId) {
+    console.error('Available price IDs:', {
+      starter: config.stripe.starterPriceId,
+      pro_monthly: config.stripe.proMonthlyPriceId,
+      pro_yearly: config.stripe.proYearlyPriceId,
+      enterprise_monthly: config.stripe.enterpriseMonthlyPriceId,
+      enterprise_yearly: config.stripe.enterpriseYearlyPriceId,
+    });
+    throw new Error(`Invalid plan/billing: ${planId}/${billingCycle}. Available: STARTER/PROFESSIONAL/ENTERPRISE`);
   }
+
+  return priceId;
+}
 
   async createCheckoutSession(data) {
     const { userId, planId, billingCycle, userEmail, successUrl, cancelUrl } = data;

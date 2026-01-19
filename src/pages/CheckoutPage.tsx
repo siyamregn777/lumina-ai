@@ -42,14 +42,14 @@ const CheckoutPage: React.FC = () => {
     const plans = {
       starter: { id: 'starter', name: 'Starter', price: 0, isFree: true },
       pro: { 
-        id: 'pro', 
+        id: 'PROFESSIONAL', 
         name: 'Professional', 
         monthlyPrice: 9, 
         yearlyPrice: 9 * 12 * 0.75, // 25% discount
         isFree: false 
       },
       enterprise: { 
-        id: 'enterprise', 
+        id: 'ENTERPRISE', 
         name: 'Enterprise', 
         monthlyPrice: 99, 
         yearlyPrice: 99 * 12 * 0.75, // 25% discount
@@ -75,106 +75,67 @@ const CheckoutPage: React.FC = () => {
     checkUser();
   }, [navigate, location]);
 
-  const handleCheckout = async () => {
+  
+const handleCheckout = async () => {
   if (!user || !plan) return;
 
   setLoading(true);
   setError('');
 
   try {
-    // For free plan (keep as is)
-    if (plan.id === 'starter' || plan.price === 0) {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          subscription_plan: plan.id,
-          subscription_status: 'active',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-      
-      navigate('/dashboard', { 
-        state: { message: `Successfully subscribed to ${plan.name} plan!` } 
-      });
-      return;
-    }
-
-    // For paid plans
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const currentOrigin = window.location.origin;
-    
-    console.log('=== FRONTEND CHECKOUT DEBUG ===');
-    console.log('API URL:', apiUrl);
-    console.log('Current Origin:', currentOrigin);
+    console.log('=== CHECKOUT ===');
     console.log('Plan:', plan);
 
-    // Use the SAME URL variable consistently
+    // ✅ Send UPPERCASE to backend (backend will accept both, but be consistent)
+    const backendPlanId = plan.id.toUpperCase(); // 'PROFESSIONAL' or 'ENTERPRISE'
+    const backendBillingCycle = plan.billingCycle.toUpperCase(); // 'MONTHLY' or 'YEARLY'
+    
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    console.log('Sending to backend:', {
+      planId: backendPlanId,
+      billingCycle: backendBillingCycle
+    });
+
     const response = await fetch(`${apiUrl}/api/create-checkout-session`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: user.id,
-        planId: plan.id.toLowerCase(), // Ensure lowercase
-        billingCycle: plan.billingCycle.toLowerCase(), // Ensure lowercase
+        planId: backendPlanId,        // UPPERCASE
+        billingCycle: backendBillingCycle, // UPPERCASE
         userEmail: user.email,
-        // Use consistent origin - remove config.getCurrentOrigin()
-        successUrl: `${currentOrigin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancelUrl: `${currentOrigin}/checkout/cancel`,
+        successUrl: `${window.location.origin}/dashboard`,
+        cancelUrl: `${window.location.origin}/pricing`,
       }),
     });
 
-    console.log('Response Status:', response.status);
-
-    const responseText = await response.text();
-    console.log('Response Text:', responseText);
-
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${responseText}`);
+      const errorText = await response.text();
+      console.error('Server error:', errorText);
+      throw new Error(errorText || `Server error: ${response.status}`);
     }
 
-    const data = JSON.parse(responseText);
-    console.log('Parsed Response:', data);
-
-    if (!data.sessionId) {
-      throw new Error('No session ID received from backend');
-    }
-
-    const { sessionId } = data;
-    console.log('✅ Session ID received:', sessionId);
-
-    // Redirect to Stripe Checkout
-    const stripe = await stripePromise;
-    if (!stripe) throw new Error('Stripe failed to load');
-
-    console.log('Redirecting to Stripe Checkout...');
-    const { error: redirectError } = await stripe.redirectToCheckout({
-      sessionId,
-    });
-
-    if (redirectError) {
-      throw redirectError;
+    const data = await response.json();
+    console.log('Success:', data);
+    
+    if (data.sessionId) {
+      console.log('✅ Redirecting to Stripe...');
+      const stripe = await stripePromise;
+      if (!stripe) throw new Error('Stripe failed to load');
+      
+      const { error: redirectError } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId,
+      });
+      
+      if (redirectError) throw redirectError;
+    } else {
+      throw new Error('No session ID received');
     }
 
   } catch (err: any) {
-    console.error('❌ Checkout Error:', err);
-    console.error('Error Stack:', err.stack);
-    
-    let errorMessage = err.message || 'An error occurred during checkout. Please try again.';
-    
-    // Provide more specific error messages
-    if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      errorMessage = 'Cannot connect to the backend server. Please ensure it is running on localhost:3001';
-    } else if (err.message.includes('CORS')) {
-      errorMessage = 'CORS error detected. Please check browser console for details.';
-    } else if (err.message.includes('HTTP')) {
-      errorMessage = `Server error: ${err.message}`;
-    }
-    
-    setError(errorMessage);
+    console.error('❌ Checkout error:', err);
+    setError(err.message || 'Checkout failed');
   } finally {
     setLoading(false);
   }

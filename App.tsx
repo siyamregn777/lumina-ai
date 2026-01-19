@@ -59,7 +59,7 @@ const App: React.FC = () => {
       email: sbUser.email || '',
       name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0],
       role: sbUser.user_metadata?.role || UserRole.USER,
-      subscription: sbUser.user_metadata?.subscription || SubscriptionPlan.FREE,
+      subscription: sbUser.user_metadata?.subscription || SubscriptionPlan.STARTER,
     });
   };
 
