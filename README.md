@@ -6,7 +6,6 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1NGTnugpldZs1XDpRGBWsSj7rjiWpBw5L
 
 ## Run Locally
 
@@ -20,6 +19,4 @@ View your app in AI Studio: https://ai.studio/apps/drive/1NGTnugpldZs1XDpRGBWsSj
    `npm run dev`
 
 
-Deploy url
 
-https://lumina-ai-green.vercel.app/
